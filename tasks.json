@@ -1,0 +1,49 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "tsc-watch",
+        "type": "shell",
+        "command": "tsc",
+        "args": ["-w", "--preserveWatchOutput"],
+        "problemMatcher": ["$tsc-watch"],
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        },
+        "runOptions": {
+          "runOn": "folderOpen"
+        }
+      },
+      {
+        "label": "Compile SCSS",
+        "type": "shell",
+        "command": "sass",
+        "args": [
+          "src/style.scss",
+          "dist/style.css"
+        ],
+        "problemMatcher": [],
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        }
+      },
+      {
+        "label": "Watch SCSS",
+        "type": "shell",
+        "command": "sass",
+        "args": [
+          "--watch",
+          "src/style.scss:dist/style.css"
+        ],
+        "isBackground": true,
+        "problemMatcher": [],
+        "group": {
+          "kind": "build",
+          "isDefault": false
+        }
+      }
+    ]
+  }
+  

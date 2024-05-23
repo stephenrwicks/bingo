@@ -1,0 +1,66 @@
+$white: whitesmoke;
+$light: #c703fc;
+$medium: #9774cc;
+$dark: #b8a1bd;
+$darkest: #5a0619;
+
+:root {
+    font-size: 16px;
+}
+@media (max-width: 80rem) {
+    :root {
+        font-size: 12px;
+    }
+}
+
+
+
+main {
+    background-color: $darkest;
+    height: 80vh;
+    display: grid;
+    place-items: center;
+}
+
+.board {
+    background-color: $white;
+    padding: .2rem;
+    display: grid;
+    width: fit-content;
+    gap: .2rem;
+}
+
+.box {
+    all: unset;
+    color: $white;
+    display: grid;
+    place-items: center;
+    font-size: 1em;
+    text-align: center;
+    height: 5rem;
+    width: 5rem;
+    cursor: pointer;
+    border: 1px solid darkgray;
+    padding: 1rem;
+    background-color: $medium;
+    transition: background-color .2s ease;
+    overflow: hidden;
+
+    &::selection {
+        background: transparent;
+    }
+
+    &:hover {
+        background-color: $light;
+    }
+
+    &:active {
+        background-color: $white;
+    }
+
+    &.selected {
+        background-color: $light;
+        transition: background-color 1s ease;
+    }
+
+}
