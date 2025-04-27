@@ -458,6 +458,9 @@ There is some repetitive code in here. Definitely could abstract out the screen 
                     required: true,
                     onChange(e) {
                         const val = e.target.value;
+                        if (!val) {
+                            setGameState(p => ({ ...p, textArrayId: 'custom', textArray: [] }));
+                        }
                         if (val === 'custom') {
                             setGameState(p => ({ ...p, textArrayId: 'custom', textArray: [] }));
                         }
