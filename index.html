@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<!-- 
+This was my first attempt at building something with React. 
+I skipped JSX and build step for fun / simplicity / to get a feel for lower-level stuff.
+There is some repetitive code in here. Definitely could abstract out the screen changing / forward and back buttons another level.
+~April 2025
+-->
+
+<head>
+    <meta charset="UTF-8">
+    <title>Bingo Game Generator: React 18 without JSX or build step</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <style>
+        :root {
+
+            --black: black;
+            --white: white;
+            --green: green;
+            --lightGreen: mintcream;
+            --gray: #ccc;
+            --lightGray: #eee;
+
+            --box-shadow: 0px 1px 8px var(--gray);
+            --border: 1px solid var(--green);
+            --border-radius: 3px;
+        }
+
+        * {
+            font: 16px "Arial", "Helvetica", sans-serif;
+            box-sizing: border-box;
+            margin: 0px;
+            padding: 0px;
+            color: var(--black);
+
+            &::selection {
+                background-color: var(--green);
+                color: var(--white);
+            }
+        }
+
+        body {
+            margin: 0px;
+            padding: 0px;
+            height: 100vh;
+            width: 100vw;
+            display: grid;
+            place-items: center;
+        }
+
+        main {
+            margin: 10px;
+            display: flex;
+            flex-flow: row wrap;
+            justify-content: center;
+            gap: 40px;
+        }
+
+        p {
+            margin-bottom: 1em;
+        }
+
+        .setup {
+            display: grid;
+            grid-template-rows: 1fr min-content;
+            place-items: center;
+            row-gap: 20px;
+            min-height: 20rem;
+            min-width: 35rem;
+            max-height: fit-content;
+            max-width: fit-content;
+            padding: 20px;
+            border: var(--border);
+            border-radius: var(--border-radius);
+        }
+
+
+        input[type="text"] {
+            all: unset;
+            padding: .5em;
+            margin: .5em;
+
+            background-color: var(--white);
+            color: var(--black);
+            border: var(--border);
+            border-radius: var(--border-radius);
+
+
+            &:focus {
+                background-color: var(--lightGreen);
+                box-shadow: var(--box-shadow);
+            }
+
+        }
+
+        select {
+            padding: .5em;
+            margin: 1em;
+            width: 15rem;
+            background-color: var(--lightGreen);
+            color: var(--black);
+            border: var(--border);
+            border-radius: var(--border-radius);
+
+            &:focus {
+                box-shadow: var(--box-shadow);
+            }
+        }
+
+        input[type="radio"] {
+            display: block;
+            scale: 2;
+            accent-color: var(--green);
+            cursor: pointer;
+        }
+
+        .radio-label {
+            display: flex;
+            gap: 15px;
+            padding: 8px 15px;
+            margin: .1em;
+            cursor: pointer;
+            user-select: none;
+
+            border-radius: var(--border-radius);
+
+            &:hover {
+                background-color: var(--lightGray);
+            }
+        }
+
+        .button-div {
+            display: flex;
+            justify-self: end;
+        }
+
+        button {
+            all: unset;
+            display: grid;
+            place-items: center;
+            text-align: center;
+            text-wrap: balance;
+            user-select: none;
+            cursor: pointer;
+            padding: .8rem;
+            margin: .4rem;
+            border: var(--border);
+            border-radius: var(--border-radius);
+            background-color: var(--lightGreen);
+
+            &:hover,
+            &:focus {
+                box-shadow: var(--box-shadow);
+            }
+
+            &:active {
+                color: var(--white);
+                background-color: var(--green);
+            }
+
+        }
+
+        .text-array-container {
+            width: 100%;
+        }
+
+        .text-array {
+            display: flex;
+            flex-flow: column wrap;
+            overflow-y: auto;
+            height: 60vh;
+            width: 80vw;
+            border: var(--border);
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            padding: 1rem .5rem;
+
+            overflow: auto;
+        }
+
+        .text-array>div {
+            display: flex;
+            align-items: center;
+            width: fit-content;
+        }
+
+        .text-array input,
+        .text-array button {
+            padding: 8px;
+            margin: .1em;
+        }
+
+
+        .board {
+            display: grid;
+            box-shadow: var(--box-shadow);
+
+        }
+
+        button.square {
+            --size: 5rem;
+            font-size: 14px;
+            height: var(--size);
+            width: var(--size);
+            padding: calc(var(--size)/10);
+            margin: 0px;
+            border-radius: 0px;
+            border: 0px;
+            outline: 1px solid var(--green);
+
+            display: -webkit-box;
+            overflow: hidden;
+            text-overflow: ellipsis;
+
+            transition: scale .1s ease;
+
+            &[data-is-selected="true"] {
+                background-color: var(--green);
+                color: var(--white);
+                outline: 1px solid var(--gray);
+            }
+
+            &[data-is-selected="false"] {
+                &:hover {
+                    scale: 1.15;
+                }
+            }
+
+            &:active,
+            &:focus {
+                box-shadow: none;
+            }
+
+            &:hover {
+                box-shadow: none;
+            }
+        }
+
+        .victory {
+            animation: victory 4s linear infinite;
+        }
+
+        @keyframes victory {
+            100% {
+                filter: hue-rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main></main>
+    <script type="module">
+        const { createElement, createContext, useState, useEffect, useContext, useRef } = React;
+
+        const AppContext = createContext();
+
+        // Global game state. I started off using props and state for these, 
+        // but passing them between screens quickly gets out of control
+        const AppProvider = ({ children }) => {
+            const [gameState, setGameState] = useState({
+                currentScreen: StartScreen,
+                numberOfPlayers: 2,
+                playerNames: [],
+                boardSize: 25,
+                victoryNumber: 1,
+                textArray: [],
+                textArrayId: '',
+            });
+
+            return createElement(
+                AppContext.Provider,
+                { value: { gameState, setGameState } },
+                children
+            );
+        };
+        const useAppContext = () => useContext(AppContext);
+        const App = () => {
+            const { gameState, setGameState } = useAppContext();
+            return createElement(gameState.currentScreen);
+        };
+
+        const root = ReactDOM.createRoot(document.querySelector('main'));
+        // AppProvider is a wrapper element that goes around App
+        root.render(createElement(AppProvider, null, createElement(App)));
+
+        const StartScreen = () => {
+            const { setGameState } = useAppContext();
+            return createElement('div', { className: 'setup' },
+                createElement('h1', null, 'Bingo Game Generator: React 18 without JSX or build step'),
+                createElement('button',
+                    {
+                        type: 'button',
+                        onClick() {
+                            setGameState(p => ({ ...p, currentScreen: SelectNumberOfPlayers }));
+                        },
+                    },
+                    'Start'
+                )
+            );
+        }
+
+        const SelectNumberOfPlayers = () => {
+            const { gameState, setGameState } = useAppContext();
+
+            const radios = Array.from({ length: 4 }, (_, i) => {
+                return createElement('label', {
+                    className: 'radio-label',
+                    key: i
+                },
+                    createElement('input', {
+                        type: 'radio',
+                        required: true,
+                        name: 'number-of-players',
+                        onChange() {
+                            setGameState(p => ({ ...p, numberOfPlayers: i + 1 }));
+                        },
+                        checked: gameState.numberOfPlayers === i + 1
+                    }),
+                    createElement('span', null, `${i + 1} Player${i ? 's' : ''}`)
+                )
+            });
+
+            const nextButton = buildButton('Next', null, 'submit');
+
+            return createElement('form', {
+                className: 'setup',
+                onSubmit(e) {
+                    e.preventDefault();
+                    if (!e.target.reportValidity()) return;
+                    setGameState(p => ({ ...p, currentScreen: EnterPlayerNames }));
+                },
+            },
+                createElement('div', null, radios),
+                createElement('div', { className: 'button-div' }, nextButton)
+            );
+        };
+
+        const EnterPlayerNames = () => {
+            const { gameState, setGameState } = useAppContext();
+
+            const inputs = Array.from({ length: gameState.numberOfPlayers }, (_, i) => {
+                const id = `player-${i + 1}-input`;
+                return createElement('div', { key: i },
+                    createElement('label', { htmlFor: id }, `Player ${i + 1} name:`),
+                    createElement('input', {
+                        id: id,
+                        type: 'text',
+                        required: true,
+                        maxLength: 25,
+                        autoComplete: 'off',
+                        pattern: '.*\\S.*',
+                        value: gameState.playerNames[i] ?? '',
+                        title: 'Enter a player name',
+                        onChange(e) {
+                            const val = e.target.value;
+                            const playerNames = gameState.playerNames.toSpliced(i, 1, val);
+                            setGameState(p => ({ ...p, playerNames }));
+                        }
+                    })
+                )
+            });
+
+            const backButton = buildButton('Back', () => setGameState(p => ({ ...p, currentScreen: SelectNumberOfPlayers })));
+            const nextButton = buildButton('Next', null, 'submit');
+
+            return createElement('form', {
+                className: 'setup',
+                onSubmit(e) {
+                    e.preventDefault();
+                    if (!e.target.reportValidity()) return;
+                    setGameState(p => ({ ...p, currentScreen: SelectBoardSize }));
+                },
+            },
+                createElement('div', null, inputs),
+                createElement('div', { className: 'button-div' }, backButton, nextButton)
+            );
+        };
+
+        const SelectBoardSize = () => {
+            const { gameState, setGameState } = useAppContext();
+
+            const backButton = buildButton('Back', () => setGameState(p => ({ ...p, currentScreen: EnterPlayerNames })));
+            const nextButton = buildButton('Next', null, 'submit');
+
+            const boardSizeRadios = [9, 16, 25, 36].map(boardSize => {
+                return createElement('label',
+                    {
+                        key: boardSize,
+                        className: 'radio-label'
+                    },
+                    createElement('input',
+                        {
+                            type: 'radio',
+                            required: true,
+                            name: 'board-size',
+                            onChange: () => setGameState(p => ({ ...p, boardSize })),
+                            checked: gameState.boardSize === boardSize
+                        }
+                    ),
+                    createElement('span', null, `${Math.sqrt(boardSize)}x${Math.sqrt(boardSize)}`)
+
+                );
+            });
+
+            const victoryNumberRadios = [1, 2, 3, 'ALL'].map(victoryNumber => {
+                return createElement('label',
+                    {
+                        key: victoryNumber,
+                        className: 'radio-label'
+                    },
+                    createElement('input',
+                        {
+                            type: 'radio',
+                            required: true,
+                            name: 'victory-number',
+                            onChange: () => setGameState(p => ({ ...p, victoryNumber })),
+                            checked: gameState.victoryNumber === victoryNumber
+                        }
+                    ),
+                    createElement('span', null, victoryNumber === 'ALL' ? 'Cover every square to win' : `Get ${victoryNumber} bingo${victoryNumber > 1 ? 's' : ''} to win`)
+                );
+            });
+
+            return createElement('form', {
+                className: 'setup',
+                onSubmit(e) {
+                    e.preventDefault();
+                    if (!e.target.reportValidity()) return;
+                    setGameState(p => ({ ...p, currentScreen: SelectTextArray }));
+                },
+            },
+                createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr' } },
+                    createElement('div', null, boardSizeRadios),
+                    createElement('div', null, victoryNumberRadios),
+                ),
+                createElement('div', { className: 'button-div' }, backButton, nextButton)
+            );
+        };
+
+        const SelectTextArray = () => {
+            const { gameState, setGameState } = useAppContext();
+
+            const backButton = buildButton('Back', () => setGameState(p => ({ ...p, currentScreen: SelectBoardSize })));
+            const nextButton = buildButton('Next', null, 'submit');
+
+            return createElement('form', {
+                className: 'setup',
+                onSubmit(e) {
+                    e.preventDefault();
+                    if (!e.target.reportValidity()) return;
+                    setGameState(p => ({ ...p, currentScreen: TextArrayEditor }));
+                },
+            },
+                createElement('select', {
+                    value: gameState.textArrayId,
+                    required: true,
+                    onChange(e) {
+                        const val = e.target.value;
+                        if (val === 'custom') {
+                            setGameState(p => ({ ...p, textArrayId: 'custom', textArray: [] }));
+                        }
+                        if (val === 'lifetime') {
+                            setGameState(p => ({ ...p, textArrayId: 'lifetime', textArray: lifeTimeList }));
+                        }
+                        if (val === 'nfl') {
+                            setGameState(p => ({ ...p, textArrayId: 'nfl', textArray: nflList }));
+                        }
+                    },
+                },
+                    createElement('option', { value: '' }, '---Select theme---'),
+                    createElement('option', { value: 'custom' }, 'Custom list'),
+                    createElement('option', { value: 'lifetime' }, 'Lifetime movie bingo'),
+                    createElement('option', { value: 'nfl' }, 'NFL bingo'),
+                ),
+                createElement('div', { className: 'button-div' }, backButton, nextButton)
+
+            );
+
+        }
+
+        const TextArrayEditor = () => {
+            const { gameState, setGameState } = useAppContext();
+            let localTextArray = gameState.textArray;
+            if (localTextArray.length < gameState.boardSize) {
+                localTextArray = [...gameState.textArray, ...Array(gameState.boardSize - gameState.textArray.length).fill('')]
+            }
+            const backButton = buildButton('Back', () => setGameState(p => ({ ...p, currentScreen: SelectTextArray })));
+            const nextButton = buildButton('Start Game', null, 'submit');
+
+            
+            const localTextArrayLength = localTextArray.filter(val => !!val.trim()).length;
+            const isLocalTextArrayLongEnough = localTextArrayLength >= gameState.boardSize;
+            const isDeletingAllowed = localTextArrayLength > gameState.boardSize;
+
+            const inputs = Array.from({ length: localTextArray.length }, (_, i) => {
+                return createElement('div', { key: i },
+                    createElement('input', {
+                        type: 'text',
+                        maxLength: 35,
+                        required: !isLocalTextArrayLongEnough,
+                        autoComplete: 'off',
+                        pattern: '.*\\S.*',
+                        value: localTextArray[i] ?? '',
+                        title: 'Enter something for each bingo square',
+                        onChange(e) {
+                            const val = e.target.value;
+                            setGameState(p => ({ ...p, textArray: localTextArray.toSpliced(i, 1, val) }));
+                        }
+                    }),
+                    createElement('button', {
+                        type: 'button',
+                        title: 'Delete',
+                        style: {
+                            visibility: isDeletingAllowed ? 'visible' : 'hidden'
+                        },
+                        onClick() {
+                            if (!isDeletingAllowed) return;
+                            setGameState(p => ({ ...p, textArray: localTextArray.toSpliced(i, 1) }));
+                        },
+                    },
+                        '×'
+                    )
+                )
+            });
+
+            const addButton = createElement('button', {
+                type: 'button',
+                onClick() {
+                    setGameState(p => ({ ...p, textArray: [...localTextArray, ''] }));
+                }
+            },
+                'Add item'
+            );
+
+            return createElement('form', {
+                className: 'setup',
+                onSubmit(e) {
+                    e.preventDefault();
+                    if (!e.target.reportValidity()) return;
+                    setGameState(p => ({ ...p, textArray: localTextArray.filter(val => !!val.trim()), currentScreen: Game }));
+                },
+            },
+                createElement('div', { className: 'text-array-container' },
+                    createElement('p', null,
+                        `Add at least ${gameState.boardSize} items.`),
+                    createElement('div', { className: 'text-array' }, inputs),
+                    addButton
+                ),
+                createElement('div', { className: 'button-div' }, backButton, nextButton)
+            );
+        };
+
+        const Game = () => {
+            const { gameState, setGameState } = useAppContext();
+            const playerNames = gameState.playerNames.slice(0, gameState.numberOfPlayers);
+            return playerNames.map((name, i) =>
+                createElement('div', { key: i },
+                    createElement('p', null, name),
+                    createElement(Board, {
+                        boardSize: gameState.boardSize,
+                        textArray: shuffleArray(gameState.textArray).slice(0, gameState.boardSize),
+                        getIsVictory: generateWinCondition(gameState.boardSize, gameState.victoryNumber)
+                    })
+                )
+            );
+        };
+
+        const Board = ({ boardSize, textArray, getIsVictory }) => {
+            const [booleanArray, setBooleanArray] = useState(Array.from({ length: boardSize }, () => false));
+
+            const isVictory = getIsVictory(booleanArray);
+            const squares = Array.from({ length: boardSize }, (_, i) => createElement('button', {
+                key: `square-${i}`,
+                className: 'square',
+                tabIndex: -1,
+                'data-is-selected': String(booleanArray[i]),
+                title: textArray[i],
+                onClick: () => setBooleanArray(booleanArray.toSpliced(i, 1, !booleanArray[i])),
+            },
+                textArray[i]));
+
+            return createElement('div',
+                {
+                    className: `board${isVictory ? ' victory' : ''}`,
+                    style: {
+                        gridTemplate: `repeat(${Math.sqrt(boardSize)}, 1fr) / repeat(${Math.sqrt(boardSize)}, 1fr)`
+                    }
+                },
+                squares
+            );
+        };
+
+        // Utilities
+
+        const buildButton = (textContent, onClick, type = 'button') => createElement('button', { type, onClick }, textContent);
+
+        const shuffleArray = (array) => {
+            array = [...array];
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        };
+
+        const generateWinCondition = (boardSize, victoryNumber) => {
+            // Win condition for ALL
+            if (victoryNumber === 'ALL') {
+                return (booleanArray) => booleanArray.filter(Boolean).length >= boardSize;
+            }
+            const length = Math.sqrt(boardSize);
+            let start = 0;
+            // Array of possible row wins
+            const rows = Array.from({ length }, () => {
+                const subArray = Array.from({ length }, (_, i) => i + start);
+                start = subArray[subArray.length - 1] + 1;
+                return subArray;
+            });
+            start = 0;
+            // Array of possible column wins
+            const columns = Array.from({ length }, () => {
+                const subArray = Array.from({ length }, (_, i) => i * length + start);
+                start += 1;
+                return subArray;
+            });
+            // Plus two possible diagonal wins
+            const diagonal1 = Array.from({ length }, (_, i) => (length * i) + i);
+            const diagonal2 = Array.from({ length }, (_, i) => length * (i + 1) - (i + 1));
+
+            // Return a function that returns a boolean
+            // Pass in board state as array of booleans (square index: bool)
+            return (booleanArray) => [...rows, ...columns, diagonal1, diagonal2].filter(arr => arr.every(n => booleanArray[n])).length >= victoryNumber;
+        };
+
+        const lifeTimeList = [
+            'knocked out',
+            'strangled',
+            'baby stealing',
+            'cult',
+            'text on screen',
+            'remote cabin / house',
+            'no service',
+            'daughter to the rescue',
+            'tied up',
+            'stabbed',
+            'online research',
+            'black cop',
+            'detective duo',
+            'running through woods',
+            'peering through a bush',
+            'drink is drugged',
+            'chloroform',
+            'time jump (two days later, etc)',
+            'flashbacks',
+            'house break-in',
+            'hidden camera',
+            'hidden microphone',
+            'locked in a room',
+            'unknown call / text',
+            'two first names',
+            'hit over the head',
+            'i did this for you',
+            'someone goes to jail',
+            'unknown relative appears',
+            'post-trauma woman in blanket',
+            'chloe',
+            'giving birth scene',
+            'gps tracking',
+            'mysterious note',
+            'hoodie',
+            'fall down stairs',
+            'death with no police investigation',
+            'going for a run',
+            'fumble over a gun',
+            'dead body found',
+            'california license plate',
+            'death by gunfire',
+            'friendly fire',
+            'affair',
+            'love triangle',
+            'obvious red herring',
+            'planted evidence',
+            'backyard pool',
+            'in hospital',
+            'coffee shop',
+            'orange juice'
+        ];
+
+        const nflList = [
+            'QB throws a touchdown',
+            'QB throws an interception',
+            'QB gets sacked',
+            'RB rushes for a touchdown',
+            'WR catches a touchdown',
+            '50+ yard field goal made',
+            'Missed field goal',
+            'Punt over 50 yards',
+            'Fumble lost',
+            'Fumble recovered by offense',
+            'Defensive touchdown',
+            'Holding penalty',
+            'False start penalty',
+            'Pass interference penalty',
+            'Roughing the passer penalty',
+            'Delay of game penalty',
+            'Offsides penalty',
+            'Coach challenges a play',
+            'Successful 2-point conversion',
+            'Missed extra point',
+            'Pick-six',
+            'Blocked punt',
+            'Blocked field goal',
+            'Safety (2 points)',
+            'Fake punt attempt',
+            'Onside kick attempt',
+            'Successful onside kick',
+            'Timeout called with under 2 minutes',
+            'Quarterback scramble for first down',
+            'Player ejected',
+            'Helmet comes off during play',
+            'Timeout wasted (delay after timeout)',
+            'Unsportsmanlike conduct penalty',
+            'Intentional grounding penalty',
+            'Long touchdown (50+ yards)',
+            'Game-winning field goal'
+        ];
+
+
+    </script>
+</body>
+
+</html>
